@@ -6,26 +6,34 @@ import { DollarSign, TrendingUp, Wallet, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
 
   const stats = [
     {
       title: 'Total Balance',
-      value: `$${user?.balance?.toFixed(2) || '0.00'}`,
+      value: `$${profile?.balance?.toFixed(2) || '0.00'}`,
       icon: Wallet,
       description: 'Available for investment',
       color: 'text-green-600',
     },
     {
       title: 'Total Invested',
-      value: `$${user?.totalInvested?.toFixed(2) || '0.00'}`,
+      value: `$${profile?.total_invested?.toFixed(2) || '0.00'}`,
       icon: TrendingUp,
       description: 'Currently invested',
       color: 'text-blue-600',
     },
     {
       title: 'Total Profit',
-      value: `$${user?.totalProfit?.toFixed(2) || '0.00'}`,
+      value: `$${profile?.total_profit?.toFixed(2) || '0.00'}`,
       icon: DollarSign,
       description: '2% return earned',
       color: 'text-purple-600',
@@ -43,7 +51,7 @@ const Dashboard = () => {
     <div className="space-y-8">
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name}!</h1>
+        <h1 className="text-2xl font-bold mb-2">Welcome back, {profile?.full_name || 'Investor'}!</h1>
         <p className="text-blue-100">
           Track your investments and grow your wealth with InvestPro.
         </p>
@@ -73,7 +81,21 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Make Deposit</CardTitle>
+            <CardDescription>
+              Add funds to your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/deposit">
+              <Button className="w-full bg-green-600 hover:bg-green-700">Add Funds</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Quick Investment</CardTitle>
@@ -90,15 +112,17 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Withdrawal Status</CardTitle>
+            <CardTitle>Request Withdrawal</CardTitle>
             <CardDescription>
               Next withdrawal window: Saturday 10 PM
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" className="w-full" disabled>
-              Withdrawals on Saturday
-            </Button>
+            <Link to="/withdraw">
+              <Button variant="outline" className="w-full">
+                Request Withdrawal
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

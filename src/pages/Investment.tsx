@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { DollarSign, TrendingUp, Info } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Investment = () => {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
-  const { user, updateUser } = useAuth();
+  const { profile, updateProfile } = useAuth();
   const { toast } = useToast();
 
   const handleInvestment = async (e: React.FormEvent) => {
@@ -27,21 +28,65 @@ const Investment = () => {
       return;
     }
 
+    if (investmentAmount > (profile?.balance || 0)) {
+      toast({
+        title: "Insufficient balance",
+        description: "You don't have enough balance for this investment. Please deposit funds first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       const profit = investmentAmount * 0.02; // 2% profit
-      const newTotalInvested = (user?.totalInvested || 0) + investmentAmount;
-      const newTotalProfit = (user?.totalProfit || 0) + profit;
-      const newBalance = (user?.balance || 0) + investmentAmount + profit;
+      
+      // Start a transaction
+      const { error: investmentError } = await supabase
+        .from('investments')
+        .insert({
+          user_id: profile?.id,
+          amount: investmentAmount,
+          profit: profit,
+          status: 'active'
+        });
 
-      updateUser({
-        totalInvested: newTotalInvested,
-        totalProfit: newTotalProfit,
+      if (investmentError) throw investmentError;
+
+      // Record investment transaction
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: profile?.id,
+          type: 'investment',
+          amount: investmentAmount,
+          status: 'approved'
+        });
+
+      if (transactionError) throw transactionError;
+
+      // Record profit transaction
+      const { error: profitError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: profile?.id,
+          type: 'profit',
+          amount: profit,
+          status: 'approved'
+        });
+
+      if (profitError) throw profitError;
+
+      // Update user profile
+      const newBalance = (profile?.balance || 0) - investmentAmount + profit;
+      const newTotalInvested = (profile?.total_invested || 0) + investmentAmount;
+      const newTotalProfit = (profile?.total_profit || 0) + profit;
+
+      await updateProfile({
         balance: newBalance,
+        total_invested: newTotalInvested,
+        total_profit: newTotalProfit,
       });
 
       toast({
@@ -50,10 +95,11 @@ const Investment = () => {
       });
 
       setAmount('');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Investment error:', error);
       toast({
         title: "Investment failed",
-        description: "An error occurred while processing your investment.",
+        description: error.message || "An error occurred while processing your investment.",
         variant: "destructive",
       });
     } finally {
@@ -81,6 +127,12 @@ const Investment = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>Available Balance:</strong> ${profile?.balance?.toFixed(2) || '0.00'}
+            </p>
+          </div>
+
           <form onSubmit={handleInvestment} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="amount">Investment Amount ($)</Label>
@@ -110,6 +162,7 @@ const Investment = () => {
                   <p>Investment: ${parseFloat(amount).toFixed(2)}</p>
                   <p>Profit (2%): ${calculateProfit().toFixed(2)}</p>
                   <p className="font-medium">Total Return: ${(parseFloat(amount) + calculateProfit()).toFixed(2)}</p>
+                  <p className="text-xs">Net gain: ${calculateProfit().toFixed(2)}</p>
                 </div>
               </div>
             )}
@@ -153,9 +206,9 @@ const Investment = () => {
             <h4 className="font-medium text-blue-800 mb-2">Important Notes:</h4>
             <ul className="text-sm text-blue-700 space-y-1">
               <li>• Returns are calculated immediately upon investment</li>
-              <li>• Withdrawals are only available on Saturdays at 10 PM</li>
-              <li>• All withdrawals require admin approval</li>
               <li>• Profits are added to your balance automatically</li>
+              <li>• You need sufficient balance to make investments</li>
+              <li>• Withdrawals are only available on Saturdays at 10 PM</li>
             </ul>
           </div>
         </CardContent>

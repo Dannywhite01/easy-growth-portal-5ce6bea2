@@ -12,6 +12,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Investment from "./pages/Investment";
+import Deposit from "./pages/Deposit";
+import Withdraw from "./pages/Withdraw";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import AdminPanel from "./pages/AdminPanel";
@@ -46,6 +48,26 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Investment />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/deposit"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Deposit />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/withdraw"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Withdraw />
                   </Layout>
                 </ProtectedRoute>
               }
